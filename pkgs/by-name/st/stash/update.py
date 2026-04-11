@@ -1,8 +1,7 @@
 #! /usr/bin/env nix-shell
-#! nix-shell -i python3 -p python3 prefetch-yarn-deps nix-prefetch-git nix-prefetch
+#! nix-shell -i python3 -p python3 prefetch-npm-deps nix-prefetch-git nix-prefetch
 
 from pathlib import Path
-from shutil import copyfile
 from urllib.request import Request, urlopen
 import json
 import os
@@ -34,10 +33,10 @@ def prefetch_github(rev: str):
 
     return json.loads(proc)
 
-def prefetch_yarn(lock_file: str):
-    print(f"Prefetching yarn deps")
+def prefetch_npm(lock_file: str):
+    print("Prefetching npm deps")
 
-    hash = run_external(["prefetch-yarn-deps", lock_file])
+    hash = run_external(["prefetch-npm-deps", lock_file])
 
     return run_external(["nix", "hash", "convert", "--hash-algo", "sha256", hash])
 
@@ -69,14 +68,12 @@ def save_version_json(version: dict[str, str]):
 if __name__ == "__main__":
     release = get_latest_release_tag()
 
-    src = prefetch_github(release['name'])
-
-    yarn_hash = prefetch_yarn(f"{src['path']}/ui/v2.5/yarn.lock")
+    src = prefetch_github(release["name"])
 
     save_version_json({
         "version": release["name"][1:],
         "gitHash": release["commit"]["sha"][:8],
         "srcHash": src["hash"],
-        "yarnHash": yarn_hash,
+        "pnpmHash": prefetch_npm(f"{src['path']}/ui/v2.5/pnpm-lock.yaml"),
         "vendorHash": prefetch_go_modules(src["path"], release["name"][1:])
     })
